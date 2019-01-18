@@ -6,9 +6,9 @@ services:
     ports:
       - "3306:3306"
     volumes:
-      - ./conf/master:/etc/mysql/conf.d
-    tmpfs:
       - /var/log/mysql
+      - ./conf/master:/etc/mysql/conf.d
+      - ./initdb/master:/docker-entrypoint-initdb.d
     environment:
       MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
   slave:
@@ -18,30 +18,9 @@ services:
     ports:
       - "3307:3306"
     volumes:
-      - ./conf/slave:/etc/mysql/conf.d
-    tmpfs:
       - /var/log/mysql
+      - ./conf/slave:/etc/mysql/conf.d
+      - ./initdb/slave:/docker-entrypoint-initdb.d
     environment:
       MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
-  create_user:
-    image: mysql:5.7.24
-    depends_on:
-      - master
-    command: >
-      sleep 10;
-      mysql -hmaster -uroot -e
-      "CREATE USER 'repl'@'%' IDENTIFIED BY 'slavepass';
-      GRANT REPLICATION SLAVE ON *.* TO 'repl'@'%';";
-  start_replication:
-    image: mysql:5.7.24
-    depends_on:
-      - create_user
-    command: >
-      sleep 10;
-      mysql -hslave -uroot -e "
-      CHANGE MASTER TO
-      MASTER_HOST='master',
-      MASTER_USER='repl',
-      MASTER_PASSWORD='slavepass';
-      START SLAVE;"
 
